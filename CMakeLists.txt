@@ -6,11 +6,18 @@
 
 project ( libjpeg C )
 cmake_minimum_required ( VERSION 2.8 )
-include ( cmake/dist.cmake )
+#include ( cmake/dist.cmake )
 
-OPTION(BUILD_STATIC OFF)
-OPTION(BUILD_EXECUTABLES ON)
-OPTION(BUILD_TESTS ON)
+OPTION(JPEG_BUILD_STATIC OFF)
+OPTION(JPEG_BUILD_EXECUTABLES ON)
+OPTION(JPEG_BUILD_TESTS OFF)
+OPTION(JPEG_INSTALL ON)
+
+if(${JPEG_INSTALL})
+SET(JPEG_INSTALL_LOCATION 
+    ${CMAKE_INSTALL_PREFIX}/libjpg 
+    CACHE STRING "Location to install libs, headders and docs")
+endif(${JPEG_INSTALL})
 
 include ( CheckIncludeFile )
 check_include_file ( stddef.h HAVE_STDDEF_H )
@@ -35,13 +42,13 @@ set ( SRC jmemnobs.c jaricom.c jcapimin.c jcapistd.c jcarith.c jccoefct.c jccolo
   jidctflt.c jidctfst.c jidctint.c jquant1.c jquant2.c jutils.c jmemmgr.c cderror.h 
   cdjpeg.h jdct.h jinclude.h jmemsys.h jpegint.h jversion.h transupp.h )
 
-if ( BUILD_STATIC )
+if (${JPEG_BUILD_STATIC})
   add_library ( jpeg STATIC ${SRC} ${HEADERS} )
 else ()
   add_library ( jpeg ${SRC} ${HEADERS} )
 endif()
 
-if ( BUILD_EXECUTABLES )
+if ( JPEG_BUILD_EXECUTABLES )
   add_executable ( cjpeg cdjpeg.c cjpeg.c rdbmp.c rdgif.c rdppm.c rdrle.c rdtarga.c 
     rdswitch.c )
   add_executable ( djpeg cdjpeg.c djpeg.c wrbmp.c wrgif.c wrppm.c wrrle.c wrtarga.c 
@@ -54,17 +61,20 @@ if ( BUILD_EXECUTABLES )
   target_link_libraries ( jpegtran jpeg )
 endif ()
 
-if ( BUILD_EXECUTABLES )
+if (${JPEG_BUILD_EXECUTABLES})
   install_executable ( cjpeg djpeg jpegtran rdjpgcom wrjpgcom )
 endif ()
 
-install_library ( jpeg )
-install_header ( ${HEADERS} )
-install_doc ( README install.txt usage.txt wizard.txt example.c libjpeg.txt structure.txt 
-  coderules.txt filelist.txt change.log )
+if (${JPEG_INSTALL})
+install(TARGETS jpeg DESTINATION ${JPEG_INSTALL_LOCATION})
+install (FILES  ${HEADERS} DESTINATION ${JPEG_INSTALL_LOCATION} COMPONENT Header)
+install (FILES install.txt usage.txt wizard.txt example.c libjpeg.txt structure.txt
+               coderules.txt filelist.txt change.log DESTINATION 
+               ${JPEG_INSTALL_LOCATION} COMPONENT Documentation)
+endif ()
 
-if ( BUILD_TESTS )
-  # tests
+# tests
+if (${JPEG_BUILD_TESTS})
   enable_testing ( )
   macro ( mytest name target args input output )
   get_target_property ( _cmdpath ${target} LOCATION )
@@ -72,16 +82,18 @@ if ( BUILD_TESTS )
     "-DOUTPUT=${output}" -P ${CMAKE_CURRENT_SOURCE_DIR}/jpeg_test.cmake )
   endmacro ( )
   set ( _src "${CMAKE_CURRENT_SOURCE_DIR}" )
-  mytest ( t1 djpeg "-dct int -ppm -outfile testout.ppm ${_src}/testorig.jpg" "${_src}/testimg.ppm" 
-    testout.ppm )
-  mytest ( t2 djpeg "-dct int -bmp -colors 256 -outfile testout.bmp ${_src}/testorig.jpg" 
-    ${_src}/testimg.bmp testout.bmp )
-  mytest ( t3 cjpeg "-dct int -outfile testout.jpg ${_src}/testimg.ppm" ${_src}/testimg.jpg 
-    testout.jpg )
-  mytest ( t4 djpeg "-dct int -ppm -outfile testoutp.ppm ${_src}/testprog.jpg" ${_src}/testimg.ppm 
-    testoutp.ppm )
-  mytest ( t5 cjpeg "-dct int -progressive -opt -outfile testoutp.jpg ${_src}/testimg.ppm" 
-    ${_src}/testimgp.jpg testoutp.jpg )
-  mytest ( t6 jpegtran "-outfile testoutt.jpg ${_src}/testprog.jpg" ${_src}/testorig.jpg 
-    testoutt.jpg )
+  if (${JPEG_BUILD_EXECUTABLES})
+    mytest ( t1 djpeg "-dct int -ppm -outfile testout.ppm ${_src}/testorig.jpg" "${_src}/testimg.ppm" 
+      testout.ppm )
+    mytest ( t2 djpeg "-dct int -bmp -colors 256 -outfile testout.bmp ${_src}/testorig.jpg" 
+      ${_src}/testimg.bmp testout.bmp )
+    mytest ( t3 cjpeg "-dct int -outfile testout.jpg ${_src}/testimg.ppm" ${_src}/testimg.jpg 
+      testout.jpg )
+    mytest ( t4 djpeg "-dct int -ppm -outfile testoutp.ppm ${_src}/testprog.jpg" ${_src}/testimg.ppm 
+      testoutp.ppm )
+    mytest ( t5 cjpeg "-dct int -progressive -opt -outfile testoutp.jpg ${_src}/testimg.ppm" 
+      ${_src}/testimgp.jpg testoutp.jpg )
+    mytest ( t6 jpegtran "-outfile testoutt.jpg ${_src}/testprog.jpg" ${_src}/testorig.jpg 
+      testoutt.jpg )
+  endif (${JPEG_BUILD_EXECUTABLES})
 endif ()
